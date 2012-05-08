@@ -17,7 +17,7 @@ Klonujemy repozytorium do katalogu domowego poleceniem: git clone git@github.com
 - test.groovy - plik programu, jest to okienkowy interfejs do przerzucania "rekordów" między bazami SQLite i CouchDB,
 - .groovy - folder z plikiem konfiguracyjnym grapeConfig.xml dla mechanizmu Grape znacznie przyspieszający jego pracę.
 
-Następnie uruchamiamy skrypt poleceniem: groovy test.groovy. W oknie aplikacji najpierw klikamy na przycisk "XML -> CouchDB", co przerzuci dane z pliku XML do (domyślnie) bazy "quotes" stworzonej na CouchDB. Później kopiujemy dane do bazy SQLite przyciskiem "CouchDB -> SQLite" (zostanie utworzony plik test.db w naszym repozytorium) i podejrzeć wynik w nowym oknie po wybraniu opcji "Tabela SQL". Na końcu możemy ponowne załadować rekordy z SQLite'a do CouchDB poprzez wybór "SQLite -> CouchDB".
+Po odpaleniu serwera CouchDB ruchamiamy skrypt poleceniem: groovy test.groovy. W oknie aplikacji najpierw klikamy na przycisk "XML -> CouchDB", co przerzuci dane z pliku XML do (domyślnie) bazy "quotes" stworzonej na CouchDB. Później kopiujemy dane do bazy SQLite przyciskiem "CouchDB -> SQLite" (zostanie utworzony plik test.db w naszym repozytorium) i podejrzeć wynik w nowym oknie po wybraniu opcji "Tabela SQL". Na końcu możemy ponowne załadować rekordy z SQLite'a do CouchDB poprzez wybór "SQLite -> CouchDB".
 
 Linki:
 
