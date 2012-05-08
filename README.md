@@ -3,21 +3,21 @@ gcouchdb
 
 Wstęp:
 
-Plik test.groovy to skrypt przerzucający dane między bazami danych Couchdb i SQLite. Został napisany w języku Groovy, który jest "nakładką" na język Java, ma przyjemniejszą składnie, działa na JVM i umożliwia - między innymi - korzystanie z wszystkich javowych bibliotek. W skrypcie dostęp do CouchDB zapewnia interfejs jcouchdb a relacyjną bazą danych jest SQLite.
+Plik test.groovy to skrypt przerzucający dane między bazami Couchdb i SQLite. Został napisany w języku Groovy, który jest "nakładką" na język Java, ma przyjemniejszą i prostsza składnię (ogólnie jest językiem dynamiczie typowanym z ciekawym  mechanizmem "domknięć"), działa na JVM i umożliwia - między innymi - korzystanie ze wszystkich bibliotek javowych. W skrypcie dostęp do baz CouchDB zapewnia interfejs jcouchdb, relacyjną bazą danych jest SQLite a prosta "okienkowość" oparta jest na Swingu.
 
 Instalacja:
 
-Wystarczy zainstalować interpreter języka Groovy, na Ubuntu: sudo apt-get install groovy. Resztę potrzebnych bibliotek zapewnia nam mechanizm Grape wbudowany w Groovy'ego, który śćiąga i cache'uje potrzebne pliku w folderze .groovy w katalogu domowym użytkownika. Ostatecznie znajdować się w nim będą pliki .jar dla bazy SQLite, interfejsu jcouchdb, parsowania plików XML i JSON, z których korzysta skrypt.
+Żeby uruchomić skrypt wystarczy zainstalować interpreter języka Groovy. Na Ubuntu realizuje to polecenie: sudo apt-get install groovy. Resztę potrzebnych bibliotek zapewnia nam mechanizm Grape wbudowany w Groovy'ego, który przy pierwszym uruchomieniu ściąga a następnie cache'uje potrzebne pliki w folderze .groovy w katalogu domowym użytkownika. Ostatecznie znajdować się w nim będą pliki .jar dla bazy SQLite, interfejsu jcouchdb oraz parsowania plików XML i JSON, które są ładowane w programie zwykłymi javowymi "importami".
 
 Użytkowanie: 
 
-Klonujemy repozytorium do katalogu domowego: git clone git@github.com:ojuhas/gcouchdb.git. Powinny znajdować się w nim następujące pliki/foldery:
+Klonujemy repozytorium do katalogu domowego poleceniem: git clone git@github.com:ojuhas/gcouchdb.git. W ściągniętym repozytorium powinny znajdować się następujące pliki/foldery:
 
 - database.xml - plik xml z bazą cytatów, które sparsujemy i wrzucimy do bazy CouchDB,
-- test.groovy - plik z programem, jest to okienkowy interfejs do przerzucania "rekordów" między bazami SQLite i CouchDB,
+- test.groovy - plik programu, jest to okienkowy interfejs do przerzucania "rekordów" między bazami SQLite i CouchDB,
 - .groovy - folder z plikiem konfiguracyjnym grapeConfig.xml dla mechanizmu Grape znacznie przyspieszający jego pracę.
 
-Następnie uruchamiamy nasz skrypt poleceniem: groovy test.groovy. Powinno pojawić się okno programu, gdzie najpierw wybieramy opcję "XML -> CouchDB", która wrzuci dane z pliku XML do bazy (domyślnie) "quotes" utworzonej na CouchDB. Później możemy przerzucić te dane do bazy SQLite (zostanie utworzony plik test.db w repozytorium), podejrzeć wynik w nowym oknie po kliknięciu przycisku "Tabela SQL" i ponownie załadować rekordy z SQLite'a do CouchDB.
+Następnie uruchamiamy skrypt poleceniem: groovy test.groovy. W oknie aplikacji najpierw klikamy na przycisk "XML -> CouchDB", co przerzuci dane z pliku XML do (domyślnie) bazy "quotes" stworzonej na CouchDB. Później kopiujemy dane do bazy SQLite przyciskiem "CouchDB -> SQLite" (zostanie utworzony plik test.db w naszym repozytorium) i podejrzeć wynik w nowym oknie po wybraniu opcji "Tabela SQL". Na końcu możemy ponowne załadować rekordy z SQLite'a do CouchDB poprzez wybór "SQLite -> CouchDB".
 
 Linki:
 
