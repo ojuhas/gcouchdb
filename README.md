@@ -21,6 +21,6 @@ Następnie uruchamiamy nasz skrypt poleceniem: groovy test.groovy. Powinno pojaw
 
 Linki:
 
-groovy - http://groovy.codehaus.org/
-jcouchdb - http://code.google.com/p/jcouchdb/
-sqlite - http://www.sqlite.org/
+- groovy - http://groovy.codehaus.org/, http://groovy.codehaus.org/Closures+-+Formal+Definition
+- jcouchdb - http://code.google.com/p/jcouchdb/
+- sqlite - http://www.sqlite.org/
