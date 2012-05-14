@@ -69,17 +69,17 @@ def XML_To_CouchDB = { name_xml, name_couchdb, name_sqlite ->
 	db.bulkCreateDocuments(json_map) // ladowanie tablicy JSONow do bazy na CouchDB
 }
 
-/* */
+/* Metoda przerzucajaca dane z CouchDB do SQLite'a czyli z bazy dokumentowej do relacyjnej. Najpierw tworzymy baze w SQLite zwyklym "create table", pozniej laczymy sie z Couchem, pobieramy z niego wszystkie obiekty z bazy i wrzucamy je do SQLite'a "insert into" z "union all", zeby zoptymalizowac proces dodawania. Zapenia to nam, ze dopiero co 500 obiektow nastapi dodanie ich bo bazy, co jest szybsze niz gdyby za kazdym razem mialo sie to odbywac dla kazdego oddzielnie. Liczba 500 jest wybrana "na czuja", zeby bylo jak najbardziej optymalnie. */
 
 def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 
-	def sql = Sql.newInstance("jdbc:sqlite:./${name_sqlite}.db","org.sqlite.JDBC")
+	def sql = Sql.newInstance("jdbc:sqlite:./${name_sqlite}.db","org.sqlite.JDBC") // inicjalizujemy polaczenie z baza SQLite
 
-	try {
+	try { // usuwamy tabele z danymi
 	   sql.execute("drop table QUOTES")
 	} catch(Exception e){}
 
-	println sql.execute('''create table QUOTES (
+	println sql.execute('''create table QUOTES ( //tworzymy nowa tabele naszych cytatow
 	    id integer not null primary key,
 	    title varchar(300),
 	    author varchar(300),
@@ -91,13 +91,13 @@ def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 	def json = ""
 	def db = new Database("localhost", name_couchdb);
 
-	ViewAndDocumentsResult<Object,BaseDocument> docs = db.query("_all_docs", Object.class, BaseDocument.class, null, null, null);
+	ViewAndDocumentsResult<Object,BaseDocument> docs = db.query("_all_docs", Object.class, BaseDocument.class, null, null, null); // w tym momencie, po polaczeniu z baza na CouchDB, pobieramy wszystkie obiekty i mapujemy je na standardowa klase BaseObject. Mapowanie jest potrzebne, zeby mozna bylo odwolywac sie do pol "tytul", "cytat" itp. i wrzucac je do SQLite'a.
 	
 	json = "INSERT INTO QUOTES ('title', 'author', 'quote', 'subject')\n"
 	
 	def tmp = ""
 	
-	for (ValueAndDocumentRow<Object,BaseDocument> r : docs.getRows())
+	for (ValueAndDocumentRow<Object,BaseDocument> r : docs.getRows()) // przelatujemy po pobranych obiektach
 	{
 		title = r.getDocument().getProperty("title") as String
 		author = r.getDocument().getProperty("author") as String
@@ -107,11 +107,11 @@ def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 		tmp += "select \"${title}\", \"${author}\", \"${quote}\", \"${subject}\"\n"
 		tmp +=' union all '
 
-		if (co %499 == 0 && co !=0)
+		if (co %499 == 0 && co !=0) // co 500 rekordow nastepuje dodawanie do bazy
 		{
 			tmp2 = tmp.substring(0, tmp.length() - 7)
 			tmp2=tmp2 + ';'
-			sql.execute(json+tmp2)
+			sql.execute(json+tmp2) // tu jest wykonywanie dodawania
 			tmp=""
 			tmp2=""
 		}
@@ -120,11 +120,14 @@ def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 		println co
 	}
 
+	// w naszej petli dodawalismy co 500 obiektow, a nie zawsze jest tak, ze liczba rekordow jest podzielna przez 500, wiec ponizej jest dodawanai reszta
 	tmp2 = tmp.substring(0, tmp.length() - 7)
 	tmp2 = tmp2 + ';'
 
 	sql.execute(json+tmp2)
 }
+
+/* Metoda pobierajaca dane z SQLite'a do CouchDB. Wykonujemy zwykle zapytanie "select *" i znow tworzymy tablice JSONow, ktora pozniej wrzucimy do CouchDB. */
 
 def SQLite_To_CouchDB = { name_xml, name_couchdb, name_sqlite ->
 	
@@ -138,11 +141,14 @@ def SQLite_To_CouchDB = { name_xml, name_couchdb, name_sqlite ->
 	}
 
 	def sql = Sql.newInstance("jdbc:sqlite:./${name_sqlite}.db","org.sqlite.JDBC")
-	sql.rows("select * from QUOTES" ).each { Put_To_CouchDB(it, json_map) }
+	sql.rows("select * from QUOTES" ).each { Put_To_CouchDB(it, json_map) } // tu jest pobranie wszystkiego z tabeli z SQLite i od razu tworzenie tablicy JSONow.
 
-	db.bulkCreateDocuments(json_map)
+	db.bulkCreateDocuments(json_map) // wrzucamy tablice do CouchDB
 	println "koniec"
 }
+
+
+/* */
 
 swing.edt {
 	frame(title:'Aplikacja bazodanowa', size: [550,300], locationRelativeTo: null, defaultCloseOperation:JFrame.EXIT_ON_CLOSE, show:true) {
