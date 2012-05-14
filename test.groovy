@@ -15,6 +15,11 @@ import java.awt.*
 import static javax.swing.JFrame.EXIT_ON_CLOSE 
 import javax.swing.SwingConstants
 
+// powyżej są importy bibliotek Javy i Groovy'ego do obsługi SQLite'a, Swinga czy JCouchDB
+
+/* Grapes to mechanizm wbudowany w Groovy'ego, dzieki ktoremu rozwiazywane sa problemy z brakujacymi bibliotekami. Wszystkie pliki sciagane sa z repozytorium Mavena na serwerze mvnrepository.com poleceniem Grab, nas interesuja SQLite oraz JCouchDB.
+*/
+
 @Grapes([    
 	@Grab(group='org.xerial', module='sqlite-jdbc', version='3.7.2'),
 	@Grab(group='com.google.code.jcouchdb',module='jcouchdb',version='0.10.0-3'),
@@ -27,38 +32,44 @@ def count3=0
 
 def swing = new SwingBuilder()
 
+/* Metoda przetwarzajaca dany "rekord" na JSONA, obiekt doc jest typu HashMap, bo JSONy maja strukture klucz-wartosc. Z kazdego podanego do funkcji "rekordu" wyluskujemy tytul, cyctat itp. i wrzucamy je pod odpowiedni klucz w obiekcie doc. Na koncu calego nowoutworzonego JSONa doklejamy do reszty JSONow. Ogolnie tworzymy jednego wielkiego JSONa, ktorego pozniej za jednym razem wrzucimy do bazy, bo jest to szybsze niz dodawanie kazdego osobno. */
+
 def Put_To_CouchDB(a,b)
 {
 
-	Map<String,String> doc = new HashMap<String, String>();
+	Map<String,String> doc = new HashMap<String, String>(); //tu jest tworzony JSON jako mapa
 	doc.put("title", a.title as String);
 	doc.put("quote", a.quote as String);
 	doc.put("author", a.author as String);
 	doc.put("subject", a.subject as String);
-	b.add(doc)
+	b.add(doc) //tu jest dodawanie nowego JSONA do tego "globalnego"
 }
+
+/* Metoda parsujaca plik database.xml bedacego nasza pierwotna baza danych. Tworzenie "rekordow", ktore pozniej wrzucimy do CouchDB, jest bardzo proste, co pokazuje przewage Groovy'ego nad Java, gdzie trzeba pisac multum linii kodu do obslugi XMLi. Pozniej laczymy sie z serwerem CouchDB i tworzymy na nim nasza baza danych za pomoca obiektu Database z biblioteki JCouchDB. Po utworzeniu "rekordow" przelatujemy po nich petla for tworzac z nich tablice JSONow, by na koniec zaladowac ja do bazy na Couchu. Ogolnie jest to tzw. domkniecie (z ang. closure) */
 
 def XML_To_CouchDB = { name_xml, name_couchdb, name_sqlite -> 
 
 	def file = name_xml+".xml"
 	def all = new File(file).text
-	def quotes = new XmlSlurper().parseText(all)
-	def allQuotes = quotes.item
+	def quotes = new XmlSlurper().parseText(all) // parsowanie XMLa z baza danych
+	def allQuotes = quotes.item // wybieranie znacznikow "item", ktore sa naszymi "rekordami" wrzucanymi do CouchDB
 
-	def db = new Database("localhost", name_couchdb)
+	def db = new Database("localhost", name_couchdb) // laczenie z lokalnym serwerem CouchDB 
 
 	def json_map = []
 
-	if (!db.getServer().createDatabase(db.getName()))
+	if (!db.getServer().createDatabase(db.getName())) // tworzenie bazy danych na serwerze
 	{
 		db.getServer().deleteDatabase(db.getName())
 		db.getServer().createDatabase(db.getName())
 	}
 
-	for (q in allQuotes) Put_To_CouchDB(q, json_map)
+	for (q in allQuotes) Put_To_CouchDB(q, json_map) // tworzenie ostatecznego JSONA, jest to tablica wszystkich JSONow
 
-	db.bulkCreateDocuments(json_map)
+	db.bulkCreateDocuments(json_map) // ladowanie tablicy JSONow do bazy na CouchDB
 }
+
+/* */
 
 def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 
