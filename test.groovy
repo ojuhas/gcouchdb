@@ -15,11 +15,6 @@ import java.awt.*
 import static javax.swing.JFrame.EXIT_ON_CLOSE 
 import javax.swing.SwingConstants
 
-// powyżej są importy bibliotek Javy i Groovy'ego do obsługi SQLite'a, Swinga czy JCouchDB
-
-/* Grapes to mechanizm wbudowany w Groovy'ego, dzieki ktoremu rozwiazywane sa problemy z brakujacymi bibliotekami. Wszystkie pliki sciagane sa z repozytorium Mavena na serwerze mvnrepository.com poleceniem Grab, nas interesuja SQLite oraz JCouchDB.
-*/
-
 @Grapes([    
 	@Grab(group='org.xerial', module='sqlite-jdbc', version='3.7.2'),
 	@Grab(group='com.google.code.jcouchdb',module='jcouchdb',version='0.10.0-3'),
@@ -32,54 +27,48 @@ def count3=0
 
 def swing = new SwingBuilder()
 
-/* Metoda przetwarzajaca dany "rekord" na JSONA, obiekt doc jest typu HashMap, bo JSONy maja strukture klucz-wartosc. Z kazdego podanego do funkcji "rekordu" wyluskujemy tytul, cyctat itp. i wrzucamy je pod odpowiedni klucz w obiekcie doc. Na koncu calego nowoutworzonego JSONa doklejamy do reszty JSONow. Ogolnie tworzymy jednego wielkiego JSONa, ktorego pozniej za jednym razem wrzucimy do bazy, bo jest to szybsze niz dodawanie kazdego osobno. */
-
 def Put_To_CouchDB(a,b)
 {
 
-	Map<String,String> doc = new HashMap<String, String>(); //tu jest tworzony JSON jako mapa
+	Map<String,String> doc = new HashMap<String, String>(); 
 	doc.put("title", a.title as String);
 	doc.put("quote", a.quote as String);
 	doc.put("author", a.author as String);
 	doc.put("subject", a.subject as String);
-	b.add(doc) //tu jest dodawanie nowego JSONA do tego "globalnego"
+	b.add(doc) 
 }
-
-/* Metoda parsujaca plik database.xml bedacego nasza pierwotna baza danych. Tworzenie "rekordow", ktore pozniej wrzucimy do CouchDB, jest bardzo proste, co pokazuje przewage Groovy'ego nad Java, gdzie trzeba pisac multum linii kodu do obslugi XMLi. Pozniej laczymy sie z serwerem CouchDB i tworzymy na nim nasza baza danych za pomoca obiektu Database z biblioteki JCouchDB. Po utworzeniu "rekordow" przelatujemy po nich petla for tworzac z nich tablice JSONow, by na koniec zaladowac ja do bazy na Couchu. Ogolnie jest to tzw. domkniecie (z ang. closure) */
 
 def XML_To_CouchDB = { name_xml, name_couchdb, name_sqlite -> 
 
 	def file = name_xml+".xml"
 	def all = new File(file).text
-	def quotes = new XmlSlurper().parseText(all) // parsowanie XMLa z baza danych
-	def allQuotes = quotes.item // wybieranie znacznikow "item", ktore sa naszymi "rekordami" wrzucanymi do CouchDB
+	def quotes = new XmlSlurper().parseText(all) 
+	def allQuotes = quotes.item 
 
-	def db = new Database("localhost", name_couchdb) // laczenie z lokalnym serwerem CouchDB 
+	def db = new Database("localhost", name_couchdb) 
 
 	def json_map = []
 
-	if (!db.getServer().createDatabase(db.getName())) // tworzenie bazy danych na serwerze
+	if (!db.getServer().createDatabase(db.getName())) 
 	{
 		db.getServer().deleteDatabase(db.getName())
 		db.getServer().createDatabase(db.getName())
 	}
 
-	for (q in allQuotes) Put_To_CouchDB(q, json_map) // tworzenie ostatecznego JSONA, jest to tablica wszystkich JSONow
+	for (q in allQuotes) Put_To_CouchDB(q, json_map) 
 
-	db.bulkCreateDocuments(json_map) // ladowanie tablicy JSONow do bazy na CouchDB
+	db.bulkCreateDocuments(json_map) 
 }
-
-/* Metoda przerzucajaca dane z CouchDB do SQLite'a czyli z bazy dokumentowej do relacyjnej. Najpierw tworzymy baze w SQLite zwyklym "create table", pozniej laczymy sie z Couchem, pobieramy z niego wszystkie obiekty z bazy i wrzucamy je do SQLite'a "insert into" z "union all", zeby zoptymalizowac proces dodawania. Zapenia to nam, ze dopiero co 500 obiektow nastapi dodanie ich bo bazy, co jest szybsze niz gdyby za kazdym razem mialo sie to odbywac dla kazdego oddzielnie. Liczba 500 jest wybrana "na czuja", zeby bylo jak najbardziej optymalnie. */
 
 def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 
-	def sql = Sql.newInstance("jdbc:sqlite:./${name_sqlite}.db","org.sqlite.JDBC") // inicjalizujemy polaczenie z baza SQLite
+	def sql = Sql.newInstance("jdbc:sqlite:./${name_sqlite}.db","org.sqlite.JDBC") 
 
-	try { // usuwamy tabele z danymi
+	try { 
 	   sql.execute("drop table QUOTES")
 	} catch(Exception e){}
 
-	println sql.execute('''create table QUOTES ( //tworzymy nowa tabele naszych cytatow
+	println sql.execute('''create table QUOTES ( 
 	    id integer not null primary key,
 	    title varchar(300),
 	    author varchar(300),
@@ -91,13 +80,13 @@ def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 	def json = ""
 	def db = new Database("localhost", name_couchdb);
 
-	ViewAndDocumentsResult<Object,BaseDocument> docs = db.query("_all_docs", Object.class, BaseDocument.class, null, null, null); // w tym momencie, po polaczeniu z baza na CouchDB, pobieramy wszystkie obiekty i mapujemy je na standardowa klase BaseObject. Mapowanie jest potrzebne, zeby mozna bylo odwolywac sie do pol "tytul", "cytat" itp. i wrzucac je do SQLite'a.
+	ViewAndDocumentsResult<Object,BaseDocument> docs = db.query("_all_docs", Object.class, BaseDocument.class, null, null, null);
 	
 	json = "INSERT INTO QUOTES ('title', 'author', 'quote', 'subject')\n"
 	
 	def tmp = ""
 	
-	for (ValueAndDocumentRow<Object,BaseDocument> r : docs.getRows()) // przelatujemy po pobranych obiektach
+	for (ValueAndDocumentRow<Object,BaseDocument> r : docs.getRows()) 
 	{
 		title = r.getDocument().getProperty("title") as String
 		author = r.getDocument().getProperty("author") as String
@@ -107,11 +96,11 @@ def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 		tmp += "select \"${title}\", \"${author}\", \"${quote}\", \"${subject}\"\n"
 		tmp +=' union all '
 
-		if (co %499 == 0 && co !=0) // co 500 rekordow nastepuje dodawanie do bazy
+		if (co %499 == 0 && co !=0) 
 		{
 			tmp2 = tmp.substring(0, tmp.length() - 7)
 			tmp2=tmp2 + ';'
-			sql.execute(json+tmp2) // tu jest wykonywanie dodawania
+			sql.execute(json+tmp2) 
 			tmp=""
 			tmp2=""
 		}
@@ -120,14 +109,11 @@ def CouchDB_To_SQLite = { name_xml, name_couchdb, name_sqlite  ->
 		println co
 	}
 
-	// w naszej petli dodawalismy co 500 obiektow, a nie zawsze jest tak, ze liczba rekordow jest podzielna przez 500, wiec ponizej jest dodawanai reszta
 	tmp2 = tmp.substring(0, tmp.length() - 7)
 	tmp2 = tmp2 + ';'
 
 	sql.execute(json+tmp2)
 }
-
-/* Metoda pobierajaca dane z SQLite'a do CouchDB. Wykonujemy zwykle zapytanie "select *" i znow tworzymy tablice JSONow, ktora pozniej wrzucimy do CouchDB. */
 
 def SQLite_To_CouchDB = { name_xml, name_couchdb, name_sqlite ->
 	
@@ -141,14 +127,11 @@ def SQLite_To_CouchDB = { name_xml, name_couchdb, name_sqlite ->
 	}
 
 	def sql = Sql.newInstance("jdbc:sqlite:./${name_sqlite}.db","org.sqlite.JDBC")
-	sql.rows("select * from QUOTES" ).each { Put_To_CouchDB(it, json_map) } // tu jest pobranie wszystkiego z tabeli z SQLite i od razu tworzenie tablicy JSONow.
+	sql.rows("select * from QUOTES" ).each { Put_To_CouchDB(it, json_map) } 
 
-	db.bulkCreateDocuments(json_map) // wrzucamy tablice do CouchDB
+	db.bulkCreateDocuments(json_map)
 	println "koniec"
 }
-
-
-/* */
 
 swing.edt {
 	frame(title:'Aplikacja bazodanowa', size: [550,300], locationRelativeTo: null, defaultCloseOperation:JFrame.EXIT_ON_CLOSE, show:true) {
